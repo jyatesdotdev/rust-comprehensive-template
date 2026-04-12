@@ -11,9 +11,6 @@ all-features = true
 # ── Advisories ────────────────────────────────────────────────────────────────
 [advisories]
 ignore = [
-    # rsa 0.9.x has no fix available; only pulled in transitively via
-    # sqlx-macros-core -> sqlx-mysql. We don't use MySQL.
-    { id = "RUSTSEC-2023-0071", reason = "no fix available, transitive dep via sqlx-mysql, not used" },
     # number_prefix is unmaintained but only used transitively via indicatif.
     # No security impact; will be replaced when indicatif updates.
     { id = "RUSTSEC-2025-0119", reason = "unmaintained, transitive via indicatif, no security impact" },

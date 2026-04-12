@@ -8,9 +8,10 @@
 # Uncomment the next line for library-only crates:
 # Cargo.lock
 
-# Cargo local config (keep .cargo/config.toml if checked in)
+# Cargo local config (keep checked-in config files)
 /.cargo/
 !/.cargo/config.toml
+!/.cargo/audit.toml
 
 # IDE / editor
 .vscode/

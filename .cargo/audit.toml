@@ -1,0 +1,6 @@
+[advisories]
+ignore = [
+    # rsa 0.9.x has no fix available; only pulled in transitively via sqlx-macros-core -> sqlx-mysql.
+    # We don't use MySQL — this advisory does not affect us.
+    "RUSTSEC-2023-0071",
+]
