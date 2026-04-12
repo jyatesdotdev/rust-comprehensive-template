@@ -9,28 +9,18 @@ targets = []
 all-features = true
 
 # ── Advisories ────────────────────────────────────────────────────────────────
-# Checks crates against the RustSec advisory database.
 [advisories]
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db"]
-# Fail on any vulnerability
-vulnerability = "deny"
-# Warn on unmaintained crates
-unmaintained = "warn"
-# Warn on crates that have been yanked
-yanked = "warn"
-notice = "warn"
-# To ignore specific advisories, add their IDs here:
-# ignore = [
-#     "RUSTSEC-2024-XXXX",  # reason for ignoring
-# ]
+ignore = [
+    # rsa 0.9.x has no fix available; only pulled in transitively via
+    # sqlx-macros-core -> sqlx-mysql. We don't use MySQL.
+    { id = "RUSTSEC-2023-0071", reason = "no fix available, transitive dep via sqlx-mysql, not used" },
+    # number_prefix is unmaintained but only used transitively via indicatif.
+    # No security impact; will be replaced when indicatif updates.
+    { id = "RUSTSEC-2025-0119", reason = "unmaintained, transitive via indicatif, no security impact" },
+]
 
 # ── Licenses ──────────────────────────────────────────────────────────────────
-# Controls which licenses are allowed in the dependency graph.
 [licenses]
-unlicensed = "deny"
-copyleft = "deny"
-# Confidence threshold for license detection
 confidence-threshold = 0.8
 allow = [
     "MIT",
@@ -46,33 +36,18 @@ allow = [
     "CC0-1.0",       # Creative Commons Zero
     "MPL-2.0",       # Mozilla Public License (weak copyleft, generally compatible)
 ]
-# To add per-crate license exceptions:
-# [[licenses.exceptions]]
-# name = "some-crate"
-# allow = ["LGPL-3.0"]  # reason: used only as dynamic library
 
 [licenses.private]
-# If you have private crates, list registries here
 ignore = false
 registries = []
 
 # ── Bans ──────────────────────────────────────────────────────────────────────
-# Controls which crates are allowed or denied.
 [bans]
 multiple-versions = "warn"
 wildcards = "allow"
 highlight = "all"
-# Deny specific crates known to be problematic:
-# deny = [
-#     { crate = "openssl-sys", reason = "use rustls instead" },
-# ]
-# Allow duplicate versions for specific crates:
-# skip = [
-#     { crate = "bitflags@1.3.2", reason = "transitive dep not yet updated" },
-# ]
 
 # ── Sources ───────────────────────────────────────────────────────────────────
-# Controls where crates can be fetched from.
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"

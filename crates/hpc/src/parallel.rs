@@ -17,7 +17,7 @@ pub fn parallel_filter_map<T, U, F>(data: &[T], f: F) -> Vec<U>
 where
     T: Sync,
     U: Send,
-    F: Fn(&T) -> Option<U> + Sync,
+    F: Fn(&T) -> Option<U> + Sync + Send,
 {
     data.par_iter().filter_map(f).collect()
 }

@@ -14,16 +14,16 @@ struct EntityRow {
 }
 
 impl TryFrom<EntityRow> for Entity {
-    type Error = common::Error;
+    type Error = common::AppError;
 
     fn try_from(row: EntityRow) -> Result<Self, Self::Error> {
         Ok(Entity {
-            id: row.id.parse().map_err(|e| common::Error::Internal(format!("bad uuid: {e}")))?,
+            id: row.id.parse().map_err(|e| common::AppError::validation(format!("bad uuid: {e}")))?,
             name: row.name,
             created_at: row
                 .created_at
                 .parse::<DateTime<Utc>>()
-                .map_err(|e| common::Error::Internal(format!("bad timestamp: {e}")))?,
+                .map_err(|e| common::AppError::validation(format!("bad timestamp: {e}")))?,
         })
     }
 }
@@ -40,7 +40,7 @@ impl EntityRepo {
     }
 
     /// Insert a new entity, returning it.
-    pub async fn create(&self, name: &str) -> Result<Entity, common::Error> {
+    pub async fn create(&self, name: &str) -> Result<Entity, common::AppError> {
         let entity = Entity::new(name);
         let id = entity.id.to_string();
         let ts = entity.created_at.to_rfc3339();
@@ -51,25 +51,25 @@ impl EntityRepo {
             .bind(&ts)
             .execute(&self.pool)
             .await
-            .map_err(|e| common::Error::Internal(e.to_string()))?;
+            .map_err(|e| common::AppError::database(e.to_string()))?;
 
         Ok(entity)
     }
 
     /// Find an entity by ID.
-    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Entity>, common::Error> {
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Entity>, common::AppError> {
         let row: Option<EntityRow> =
             sqlx::query_as("SELECT id, name, created_at FROM entities WHERE id = ?")
                 .bind(id.to_string())
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(|e| common::Error::Internal(e.to_string()))?;
+                .map_err(|e| common::AppError::database(e.to_string()))?;
 
         row.map(Entity::try_from).transpose()
     }
 
     /// List entities with pagination.
-    pub async fn list(&self, limit: i64, offset: i64) -> Result<Vec<Entity>, common::Error> {
+    pub async fn list(&self, limit: i64, offset: i64) -> Result<Vec<Entity>, common::AppError> {
         let rows: Vec<EntityRow> = sqlx::query_as(
             "SELECT id, name, created_at FROM entities ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
@@ -77,41 +77,41 @@ impl EntityRepo {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| common::Error::Internal(e.to_string()))?;
+        .map_err(|e| common::AppError::database(e.to_string()))?;
 
         rows.into_iter().map(Entity::try_from).collect()
     }
 
     /// Update an entity's name. Returns true if a row was modified.
-    pub async fn update_name(&self, id: Uuid, name: &str) -> Result<bool, common::Error> {
+    pub async fn update_name(&self, id: Uuid, name: &str) -> Result<bool, common::AppError> {
         let result = sqlx::query("UPDATE entities SET name = ? WHERE id = ?")
             .bind(name)
             .bind(id.to_string())
             .execute(&self.pool)
             .await
-            .map_err(|e| common::Error::Internal(e.to_string()))?;
+            .map_err(|e| common::AppError::database(e.to_string()))?;
 
         Ok(result.rows_affected() > 0)
     }
 
     /// Delete an entity. Returns true if a row was removed.
-    pub async fn delete(&self, id: Uuid) -> Result<bool, common::Error> {
+    pub async fn delete(&self, id: Uuid) -> Result<bool, common::AppError> {
         let result = sqlx::query("DELETE FROM entities WHERE id = ?")
             .bind(id.to_string())
             .execute(&self.pool)
             .await
-            .map_err(|e| common::Error::Internal(e.to_string()))?;
+            .map_err(|e| common::AppError::database(e.to_string()))?;
 
         Ok(result.rows_affected() > 0)
     }
 
     /// Demonstrate a transaction: create multiple entities atomically.
-    pub async fn create_batch(&self, names: &[&str]) -> Result<Vec<Entity>, common::Error> {
-        let mut tx = self
+    pub async fn create_batch(&self, names: &[&str]) -> Result<Vec<Entity>, common::AppError> {
+        let mut tx: sqlx::Transaction<'_, sqlx::Sqlite> = self
             .pool
             .begin()
             .await
-            .map_err(|e| common::Error::Internal(e.to_string()))?;
+            .map_err(|e| common::AppError::database(e.to_string()))?;
 
         let mut entities = Vec::with_capacity(names.len());
         for name in names {
@@ -125,14 +125,14 @@ impl EntityRepo {
                 .bind(&ts)
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| common::Error::Internal(e.to_string()))?;
+                .map_err(|e| common::AppError::database(e.to_string()))?;
 
             entities.push(entity);
         }
 
         tx.commit()
             .await
-            .map_err(|e| common::Error::Internal(e.to_string()))?;
+            .map_err(|e| common::AppError::database(e.to_string()))?;
 
         Ok(entities)
     }

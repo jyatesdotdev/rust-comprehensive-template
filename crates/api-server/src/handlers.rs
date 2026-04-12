@@ -39,7 +39,7 @@ pub async fn list_items(
     Query(params): Query<ListParams>,
 ) -> impl IntoResponse {
     let items = state.items.read().await;
-    let result: Vec<&Item> = items
+    let result: Vec<Item> = items
         .values()
         .filter(|item| {
             params
@@ -47,6 +47,7 @@ pub async fn list_items(
                 .as_ref()
                 .map_or(true, |t| item.tags.contains(t))
         })
+        .cloned()
         .collect();
     Json(result)
 }

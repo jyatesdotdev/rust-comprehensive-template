@@ -131,11 +131,11 @@ mod tests {
     #[test]
     fn test_deep_size_of() {
         let s = String::with_capacity(100);
-        let size = unsafe { DeepSizeOf::deep_size(&s) };
+        let size = DeepSizeOf::deep_size(&s);
         assert!(size >= std::mem::size_of::<String>() + 100);
 
         let v: Vec<u64> = Vec::with_capacity(50);
-        let size = unsafe { DeepSizeOf::deep_size(&v) };
+        let size = DeepSizeOf::deep_size(&v);
         assert!(size >= std::mem::size_of::<Vec<u64>>() + 50 * 8);
     }
 }

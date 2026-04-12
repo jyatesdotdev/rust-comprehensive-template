@@ -46,21 +46,22 @@ pub trait StageExt: Stage + Sized {
 impl<T: Stage + Sized> StageExt for T {}
 
 /// A stage built from a closure.
-pub struct MapStage<F> {
+pub struct MapStage<F, I, O> {
     f: F,
+    _marker: std::marker::PhantomData<fn(I) -> O>,
 }
 
 /// Create a stage from a mapping function (always produces output).
-pub fn map_stage<I, O, F: Fn(I) -> O>(f: F) -> MapStage<impl Fn(I) -> Option<O>> {
-    MapStage { f: move |input| Some(f(input)) }
+pub fn map_stage<I, O, F: Fn(I) -> O>(f: F) -> MapStage<impl Fn(I) -> Option<O>, I, O> {
+    MapStage { f: move |input| Some(f(input)), _marker: std::marker::PhantomData }
 }
 
 /// Create a stage from a filter-map function (may drop items).
-pub fn filter_stage<I, O, F: Fn(I) -> Option<O>>(f: F) -> MapStage<F> {
-    MapStage { f }
+pub fn filter_stage<I, O, F: Fn(I) -> Option<O>>(f: F) -> MapStage<F, I, O> {
+    MapStage { f, _marker: std::marker::PhantomData }
 }
 
-impl<I, O, F: Fn(I) -> Option<O>> Stage for MapStage<F> {
+impl<I, O, F: Fn(I) -> Option<O>> Stage for MapStage<F, I, O> {
     type Input = I;
     type Output = O;
     fn process(&self, input: I) -> Option<O> {

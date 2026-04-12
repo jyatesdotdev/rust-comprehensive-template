@@ -100,7 +100,8 @@ impl AppError {
     }
 
     /// Creates a [`Timeout`](Self::Timeout) error with a human-readable duration.
-    pub fn timeout(duration: std::time::Duration) -> Self {
+    #[must_use]
+    pub const fn timeout(duration: std::time::Duration) -> Self {
         Self::Timeout(HumanDuration(duration))
     }
 
@@ -110,7 +111,8 @@ impl AppError {
     }
 
     /// Returns true if this is a client error (not found, validation, auth).
-    pub fn is_client_error(&self) -> bool {
+    #[must_use]
+    pub const fn is_client_error(&self) -> bool {
         matches!(
             self,
             Self::NotFound(_)
@@ -160,6 +162,9 @@ impl fmt::Display for HumanDuration {
 /// ```
 pub trait ResultExt<T> {
     /// Convert any error into `AppError::Internal` with added context.
+    ///
+    /// # Errors
+    /// Returns `AppError::Internal` wrapping the original error with the given context message.
     fn context_app(self, msg: &str) -> Result<T>;
 }
 

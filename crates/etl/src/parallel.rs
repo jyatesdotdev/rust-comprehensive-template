@@ -16,7 +16,7 @@ pub fn par_map_reduce<T, R, MapFn, ReduceFn>(
 where
     T: Sync,
     R: Send + Clone + Sync,
-    MapFn: Fn(&T) -> R + Sync,
+    MapFn: Fn(&T) -> R + Sync + Send,
     ReduceFn: Fn(R, R) -> R + Sync,
 {
     data.par_iter()
@@ -50,7 +50,7 @@ pub fn par_filter_transform<T, U, F>(data: &[T], f: F) -> Vec<U>
 where
     T: Sync,
     U: Send,
-    F: Fn(&T) -> Option<U> + Sync,
+    F: Fn(&T) -> Option<U> + Sync + Send,
 {
     data.par_iter().filter_map(f).collect()
 }
@@ -60,7 +60,7 @@ pub fn par_batch_process<T, U, F>(data: Vec<T>, batch_size: usize, f: F) -> Vec<
 where
     T: Send,
     U: Send,
-    F: Fn(Vec<T>) -> Vec<U> + Sync,
+    F: Fn(Vec<T>) -> Vec<U> + Sync + Send,
 {
     let mut chunks: Vec<Vec<T>> = Vec::new();
     let mut iter = data.into_iter();
