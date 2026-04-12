@@ -1,0 +1,21 @@
+[package]
+name = "testing"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+common = { path = "../common" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest = "1"
+criterion.workspace = true
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
+
+[[bench]]
+name = "benchmarks"
+harness = false

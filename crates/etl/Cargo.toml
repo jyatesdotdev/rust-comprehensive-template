@@ -1,0 +1,16 @@
+[package]
+name = "etl"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+common = { path = "../common" }
+tokio.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+async-channel = "2"

@@ -1,0 +1,13 @@
+[package]
+name = "simulation"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+common = { path = "../common" }
+rayon.workspace = true
+serde.workspace = true
+tracing.workspace = true

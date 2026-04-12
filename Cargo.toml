@@ -1,0 +1,120 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/common",
+    "crates/api-server",
+    "crates/database",
+    "crates/hpc",
+    "crates/etl",
+    "crates/systems",
+    "crates/patterns",
+    "crates/simulation",
+    "crates/testing",
+    "crates/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Web frameworks & HTTP
+axum = { version = "0.7", features = ["macros"] }
+reqwest = { version = "0.12", features = ["json"] }
+tower = { version = "0.4" }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio", "postgres", "sqlite", "migrate", "chrono", "uuid"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Logging & tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Parallelism
+rayon = "1.10"
+
+# Testing
+proptest = "1"
+criterion = { version = "0.5", features = ["html_reports"] }
+assert_cmd = "2"
+predicates = "3"
+
+# System interfaces
+libc = "0.2"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+owo-colors = "4"
+indicatif = "0.17"
+
+# Configuration
+figment = { version = "0.10", features = ["toml", "env"] }
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# ── Lints ──────────────────────────────────────────────────────────
+[workspace.lints.clippy]
+# Baseline
+all      = "warn"
+pedantic = "warn"
+nursery  = "warn"
+
+# Security — panic / abort vectors
+unwrap_used       = "warn"
+expect_used       = "warn"
+panic             = "warn"
+todo              = "warn"
+unimplemented     = "warn"
+unreachable       = "warn"
+indexing_slicing   = "warn"
+
+# Security — arithmetic & type safety
+arithmetic_side_effects = "warn"
+as_conversions          = "warn"
+lossy_float_literal     = "warn"
+string_slice            = "warn"
+
+# Security — unsafe code hygiene
+undocumented_unsafe_blocks    = "deny"
+multiple_unsafe_ops_per_block = "warn"
+mem_forget                    = "warn"
+
+# Security — production hygiene
+dbg_macro    = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+exit         = "warn"
+
+# Security — filesystem
+filetype_is_file   = "warn"
+verbose_file_reads = "warn"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.bench]
+opt-level = 3
+lto = "thin"

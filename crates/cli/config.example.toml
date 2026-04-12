@@ -1,0 +1,8 @@
+# Example configuration for demo-cli.
+# Values here are overridden by APP_* env vars and CLI flags.
+
+host = "0.0.0.0"
+port = 3000
+log_level = "info"
+workers = 8
+# tls_cert = "/path/to/cert.pem"

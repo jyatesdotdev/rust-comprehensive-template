@@ -1,0 +1,16 @@
+[package]
+name = "database"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+common = { path = "../common" }
+tokio.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+chrono.workspace = true

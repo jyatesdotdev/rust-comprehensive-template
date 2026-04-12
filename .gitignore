@@ -1,0 +1,31 @@
+# Build artifacts
+/target/
+
+# Cargo.lock — committed for binary crates (reproducible builds).
+# Uncomment the next line for library-only crates:
+# Cargo.lock
+
+# Cargo local config (keep .cargo/config.toml if checked in)
+/.cargo/
+!/.cargo/config.toml
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage & profiling
+*.profraw
+*.profdata
+tarpaulin-report.*
+lcov.info
+coverage/
+
+# Benchmark output files
+criterion/

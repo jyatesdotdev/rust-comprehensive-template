@@ -1,0 +1,42 @@
+# Build artifacts
+target/
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed for build)
+docs/
+README.md
+LICENSE*
+CHANGELOG*
+
+# CI/CD
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage / profiling
+*.profraw
+*.profdata
+tarpaulin-report.*
+lcov.info
+
+# Docker (don't send Dockerfile into its own context)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Misc
+Makefile
+deny.toml
+clippy.toml
+rustfmt.toml
