@@ -32,34 +32,33 @@ rust-template/
     ├── etl/                # Iterator chains, parallel batch, streaming pipelines
     ├── systems/            # Unsafe Rust, FFI, manual memory management
     ├── patterns/           # Builder, newtype, typestate, strategy patterns
-    ├── simulation/         # Numerical methods, physics, ECS
+    ├── simulation/         # Numerical methods, RNG, statistics, physics, ECS
     ├── testing/            # Unit, property-based, integration tests, benchmarks
-    └── cli/                # Clap CLI binary with config, completions, interactive mode
+    ├── cli/                # Clap CLI binary with config, completions, interactive mode
+    ├── math/               # Hand-rolled linear algebra (foundation crate for render)
+    ├── ml/                 # Scalar autograd, MLP, SGD training loop
+    └── render/             # Ray intersection, camera pipeline, color, software ray tracer
 ```
 
 ## Crate Dependency Graph
 
 ```
-                    ┌──────────┐
-                    │  common  │
-                    └────┬─────┘
-          ┌──────┬───────┼────────┬──────┬──────┬──────┐
-          ▼      ▼       ▼        ▼      ▼      ▼      ▼
-     api-server database hpc     etl  systems simulation testing
+                    ┌──────────┐              ┌──────────┐
+                    │  common  │              │   math   │
+                    └────┬─────┘              └────┬─────┘
+          ┌──────┬───────┼────────┬──────┬──────┐  ▼
+          ▼      ▼       ▼        ▼      ▼      ▼  render
+     api-server database hpc     etl  systems simulation
+                                                testing
 
-     ┌──────────┐
-     │ patterns │  (no internal deps)
-     └──────────┘
-
-     ┌──────────┐
-     │   cli    │  (no internal deps)
-     └──────────┘
+     ┌──────────┐  ┌──────────┐  ┌──────────┐
+     │ patterns │  │   cli    │  │    ml    │   (no internal deps)
+     └──────────┘  └──────────┘  └──────────┘
 ```
 
-- `common` is the foundation crate — all domain crates depend on it for `AppError`, `Result`, and `Entity`.
-- `patterns` is standalone — it has zero dependencies (not even `common`).
-- `cli` is standalone — it depends only on external crates (clap, figment, etc.).
-- No crate depends on another domain crate (flat hierarchy rooted at `common`).
+- `common` and `math` are the two foundation crates. `common` provides `AppError`, `Result`, and `Entity` to the domain crates; `math` provides linear algebra (and its column-major / right-handed / NDC conventions) to `render`.
+- `patterns`, `cli`, and `ml` are standalone — they depend on no internal crates.
+- No domain crate depends on another domain crate (flat hierarchy rooted at the foundation crates).
 
 ## Libraries vs Binaries
 
@@ -75,6 +74,9 @@ rust-template/
 | `simulation` | Library | `libsimulation` |
 | `testing` | Library + Benchmarks | `libtesting`, Criterion bench `benchmarks` |
 | `cli` | Binary | `demo-cli` |
+| `math` | Library + Benchmarks | `libmath`, Criterion bench `benchmarks` |
+| `ml` | Library | `libml` |
+| `render` | Library | `librender` |
 
 The only binary in the workspace is `demo-cli` (from `crates/cli/src/main.rs`).
 
@@ -105,7 +107,7 @@ cargo build -p cli              # Build only the CLI binary
 cargo test --workspace          # Run all tests across all crates
 cargo test -p testing           # Run tests for a specific crate
 cargo test -p testing proptest  # Run only property-based tests
-cargo bench --workspace         # Run all benchmarks (hpc + testing)
+cargo bench --workspace         # Run all benchmarks (hpc, testing, math)
 cargo bench -p hpc              # Run benchmarks for a specific crate
 cargo clippy --workspace        # Run lints
 cargo fmt --workspace           # Format code

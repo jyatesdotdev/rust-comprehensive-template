@@ -1,6 +1,6 @@
 # Rust Comprehensive Template
 
-A Cargo workspace showcasing memory safety, performance, and modern systems programming in Rust. Ten crates cover web APIs, databases, high-performance computing, ETL pipelines, systems programming, design patterns, simulations, testing, and CLI development — each with working examples and tests.
+A Cargo workspace showcasing memory safety, performance, and modern systems programming in Rust. Thirteen crates cover web APIs, databases, high-performance computing, ETL pipelines, systems programming, design patterns, simulations, testing, CLI development, linear algebra, machine learning, and rendering — each with working examples and tests.
 
 ## Quick Start
 
@@ -11,7 +11,7 @@ cargo build
 # Run all tests
 cargo test --workspace
 
-# Run benchmarks (hpc + testing crates)
+# Run benchmarks (hpc, testing, math crates)
 cargo bench --workspace
 
 # Check lints
@@ -41,9 +41,12 @@ rust-template/
     ├── etl/             # Iterator chains, parallel batch, streaming pipelines
     ├── systems/         # Unsafe Rust, FFI, manual memory management
     ├── patterns/        # Builder, newtype, typestate, strategy patterns
-    ├── simulation/      # Numerical methods, physics, ECS
+    ├── simulation/      # Numerical methods, RNG, statistics, physics, ECS
     ├── testing/         # Unit, integration, property-based tests, benchmarks
-    └── cli/             # Clap CLI binary with config, completions, interactive mode
+    ├── cli/             # Clap CLI binary with config, completions, interactive mode
+    ├── math/            # Hand-rolled vectors, matrices, quaternions, transforms
+    ├── ml/              # Scalar autograd, MLP, SGD — trains XOR from scratch
+    └── render/          # Ray-object intersection, camera pipeline, color, PPM output
 ```
 
 ## Crates
@@ -97,9 +100,24 @@ Includes Criterion benchmarks (`cargo bench -p hpc`).
 
 ### `simulation` — Numerical & Physics
 
-- **numerical** — Trapezoidal integration, Newton-Raphson root finding, dense matrix multiply
+- **numerical** — Trapezoidal integration, Newton-Raphson root finding, RK4 ODE solver, dense matrix multiply
 - **physics** — `Vec2` with operator overloads, `Body` struct, velocity-Verlet N-body gravity
 - **ecs** — Minimal Entity Component System with `TypeId`+`Any` sparse storage, `World`, systems
+- **rng** — Deterministic PCG32 with uniform and Box-Muller normal sampling
+- **stats** — Mean, variance, median, percentile, covariance, correlation (all `Option`-returning)
+- **interp** — Lerp/remap, Catmull-Rom splines, clamping lookup-table interpolation
+
+### `math` — Linear Algebra (Foundation)
+
+Hand-rolled, pure-std `Vec2`/`Vec3`/`Vec4`, `Mat3`/`Mat4` (column-major), quaternions with slerp, and TRS/`look_at`/projection transforms targeting right-handed, OpenGL-style NDC. The second foundation crate (after `common`): `render` builds on its conventions. Criterion benchmarks included; see `glam`/`nalgebra` for production equivalents.
+
+### `ml` — Machine Learning From Scratch
+
+Micrograd-style scalar reverse-mode autograd (`Value` graph with `backward()`), a seeded MLP, SGD with momentum, and MSE/BCE losses — zero dependencies. Gradients are verified against finite differences, and an end-to-end test trains XOR to convergence deterministically.
+
+### `render` — Rendering Geometry
+
+Ray–sphere/AABB/plane intersection, a `Camera` that runs the point-to-pixel pipeline both directions (project and ray-cast), linear-vs-sRGB color handling, and a minimal Lambertian ray tracer that renders to an in-memory framebuffer with PPM output. Built entirely on `math`.
 
 ### `testing` — Testing & Benchmarking
 
