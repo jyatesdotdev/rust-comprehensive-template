@@ -22,11 +22,25 @@
 //! [`mse`] over its outputs, `backward()`, and let [`Sgd`] nudge 17
 //! parameters until the network has learned XOR.
 //!
+//! # What tensor autograd adds on top ([`tensor`])
+//!
+//! The [`Tensor`] module is the same engine batched: nodes hold whole
+//! matrices, so a layer becomes *one* matmul node instead of one node per
+//! scalar multiply — the graph has fewer, bigger nodes, and its size scales
+//! with the number of operations rather than the number of parameters.
+//! Two new backward rules appear that scalars cannot express, and they are
+//! the entire conceptual gap between micrograd and PyTorch: the matmul
+//! gradient identities (`dL/dA = dL/dC·Bᵀ`, `dL/dB = Aᵀ·dL/dC`) and the
+//! broadcast adjoint (a bias broadcast over a batch gets the column-sum of
+//! the upstream gradient). Everything else — topological sort, accumulate
+//! (`+=`), zero_grad — carries over unchanged.
+//!
 //! # Module map
 //!
 //! | Module | Payload |
 //! |---|---|
 //! | [`autograd`] | [`Value`]: the computation graph and `backward()` |
+//! | [`tensor`] | [`Tensor`]: the same graph batched — matmul + broadcast backward |
 //! | [`nn`] | [`Neuron`] / [`Layer`] / [`Mlp`] built from `Value`s |
 //! | [`optim`] | [`Sgd`] with momentum |
 //! | [`loss`] | [`mse`], [`binary_cross_entropy`] |
@@ -43,12 +57,14 @@ pub mod loss;
 pub mod nn;
 pub mod optim;
 pub mod rng;
+pub mod tensor;
 
 pub use autograd::Value;
 pub use loss::{binary_cross_entropy, mse};
 pub use nn::{Layer, Mlp, Neuron};
 pub use optim::Sgd;
 pub use rng::Rng;
+pub use tensor::Tensor;
 
 #[cfg(test)]
 mod tests {
@@ -102,6 +118,69 @@ mod tests {
                 class, target,
                 "wrong class for {xy:?}: predicted {prediction}"
             );
+        }
+    }
+
+    /// The batched counterpart of `mlp_learns_xor_end_to_end`: the *same*
+    /// 2-4-1 network on the *same* XOR problem, but where the scalar test
+    /// pushes samples through one neuron at a time (thousands of `Value`
+    /// nodes per epoch), here all four samples flow as ONE 4×2 matrix
+    /// through one matmul + broadcast-bias per layer (about ten `Tensor`
+    /// nodes per epoch). Diff the two tests to see exactly what batching
+    /// changes: the math is identical, only the granularity of the graph
+    /// nodes differs.
+    ///
+    /// Deterministic like its scalar twin: fixed seed, fixed epochs, plain
+    /// full-batch gradient descent via `Tensor::adjust(-lr)`.
+    #[test]
+    fn batched_mlp_learns_xor_with_tensors() {
+        // All four XOR samples as one batch: rows are samples.
+        let x = Tensor::from_rows(&[&[0.0, 0.0], &[0.0, 1.0], &[1.0, 0.0], &[1.0, 1.0]])
+            .expect("static shape");
+        let y = Tensor::new(4, 1, vec![0.0, 1.0, 1.0, 0.0]).expect("static shape");
+
+        // 2-4-1: hidden layer tanh, output layer linear — mirroring `Mlp`.
+        let mut rng = Rng::new(42);
+        let w1 = Tensor::random(2, 4, &mut rng);
+        let b1 = Tensor::random(1, 4, &mut rng);
+        let w2 = Tensor::random(4, 1, &mut rng);
+        let b2 = Tensor::random(1, 1, &mut rng);
+        let params = [&w1, &b1, &w2, &b2];
+
+        let forward = |x: &Tensor| {
+            let hidden = x.matmul(&w1).add_broadcast_row(&b1).tanh();
+            hidden.matmul(&w2).add_broadcast_row(&b2)
+        };
+
+        // Plain full-batch GD needs a gentler learning rate than the scalar
+        // test's momentum-SGD; 0.1 converges from this seed in well under
+        // the 500-epoch budget.
+        let lr = 0.1;
+        let mut final_loss = f64::MAX;
+        for _ in 0..500 {
+            // The same three beats as the scalar loop:
+            // zero_grad -> forward + backward -> step.
+            for param in params {
+                param.zero_grad();
+            }
+            let loss = forward(&x).mse_loss(&y);
+            loss.backward();
+            for param in params {
+                param.adjust(-lr);
+            }
+            final_loss = loss.item();
+        }
+
+        assert!(
+            final_loss < 0.01,
+            "batched XOR failed to converge: final loss {final_loss}"
+        );
+
+        // One forward pass classifies the whole batch at once.
+        let predictions = forward(&x).data();
+        for (prediction, target) in predictions.iter().zip(y.data()) {
+            let class = if *prediction > 0.5 { 1.0 } else { 0.0 };
+            assert_eq!(class, target, "wrong class: predicted {prediction}");
         }
     }
 

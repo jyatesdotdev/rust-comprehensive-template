@@ -10,7 +10,10 @@ reverse-mode autograd engine (`Value`) where every number is its own graph
 node, plus the minimum machinery to train a real network with it (MLP, SGD
 with momentum, MSE/BCE losses, a seeded RNG). Tensor frameworks — candle,
 burn, tch — do exactly this, but behind tensor handles where the chain rule
-is invisible; here the whole mechanism fits in one readable file.
+is invisible; here the whole mechanism fits in one readable file. A second
+engine (`Tensor`, in `tensor.rs`) then batches the same machinery to teach
+the one step scalars cannot: matmul and broadcast backward — the conceptual
+bridge from micrograd to PyTorch.
 
 The crate is deliberately **pure std, zero dependencies, no unsafe**. That is
 part of the lesson (autograd is just ownership, `Rc<RefCell<...>>`, and the
@@ -49,9 +52,12 @@ Do not add anything to `[dependencies]`.
 
 ### lib.rs
 
-Crate docs (what scalar autograd teaches that tensor libraries hide) and
-re-exports. Holds the two end-to-end tests: a 2-4-1 MLP learning XOR with
-MSE, and the same with sigmoid+BCE. XOR is chosen because it is the smallest
+Crate docs (what scalar autograd teaches that tensor libraries hide, and
+what tensor autograd adds on top) and re-exports. Holds the three
+end-to-end tests: a 2-4-1 MLP learning XOR with MSE, the same with
+sigmoid+BCE, and the same network again as one batched `Tensor` pass (one
+4×2 matmul per layer instead of neuron-by-neuron scalars — the scalar and
+batched tests deliberately parallel each other so readers can diff them). XOR is chosen because it is the smallest
 problem a linear model provably cannot solve. The BCE test builds sigmoid
 out of primitives on purpose — it demonstrates composition, and it documents
 that the BCE clamp is a numerical guard, *not* an activation (feeding raw
@@ -73,6 +79,38 @@ trait impls delegate to private `add_val`/`mul_val` helpers — that shape
 avoids clippy's `suspicious_arithmetic_impl` on the composed ops, keep it.
 The gradient-check test (autograd vs central finite differences) is the
 crate's ground truth: any new op must be added to that compound expression.
+
+### tensor.rs
+
+The scalar engine batched: `Tensor` is 2D only (rows, cols, flat row-major
+`Vec<f64>`) behind the same `Rc<RefCell<Node>>` graph. It exists to teach
+the two lessons scalar autograd *cannot* express, and those two backward
+identities are the invariants that must survive any edit:
+
+- **Matmul backward:** for `C = A·B`, `dL/dA = dL/dC · Bᵀ` and
+  `dL/dB = Aᵀ · dL/dC`. The `matmul_backward_matches_transpose_identities`
+  test pins this on hand-checkable matrices.
+- **Broadcast backward:** a `1×n` bias broadcast over `m` rows receives the
+  **column-wise sum** of the upstream gradient (reduction is the adjoint of
+  broadcast). Pinned by `broadcast_row_gradient_is_the_column_sum_of_upstream`.
+
+Architecture is a **deliberate mirror of `autograd.rs`** — same builder-only
+op construction, same topological sort, same `+=` accumulation, same borrow
+discipline — so a reader can diff the two files and see that batching
+changes only the payload (`f64` → shaped `Vec<f64>`) and adds those two
+rules. Do not "improve" one file in a way that breaks the parallel; if you
+change shared structure, change both.
+
+Deliberate decisions to preserve: **2D only** (a batch of vectors is the
+MLP-layer shape; N-d adds bookkeeping, not concepts — candle/burn/ndarray
+for production); **broadcast is explicit** (`add_broadcast_row`, and `+`
+demands equal shapes) because implicit numpy-style broadcasting plus
+autograd silently sums gradients over the wrong axis instead of erroring;
+`*` is elementwise, matrix product is spelled `matmul`; shape preconditions
+are **documented asserts** — fail loudly at graph-build time, not silently
+at backward time; `backward()` requires a `1×1` loss (a non-scalar seed is
+ambiguous). All of `Value`'s DAG/accumulate/zero_grad/no-reentrant-borrow
+invariants apply verbatim.
 
 ### rng.rs
 
@@ -123,7 +161,15 @@ the same node.
   each op is written next to its backward code — keep formulas and code
   adjacent.
 - New ops need: the forward + backward arms, a known-case gradient test,
-  and inclusion in the finite-difference gradient check.
+  and inclusion in the finite-difference gradient check. This applies to
+  *both* engines — `autograd.rs` and `tensor.rs` each have their own
+  `gradient_check_against_finite_differences`, and a new tensor op must be
+  wired into the tensor one (matrix ops have too many index-shuffling ways
+  to be subtly wrong for anything less).
+- Shape preconditions on tensor ops are documented asserts, not `Option`s —
+  a mismatch is a caller bug, and failing at graph-build time with both
+  shapes in the message is the teachable behavior. Keep the asserts and
+  their messages when refactoring.
 - Tests are co-located in `#[cfg(test)] mod tests`; CI enforces ≥80% line
   coverage.
 - Footgun: `Value::clone()` aliases the same node (that's the point); to
