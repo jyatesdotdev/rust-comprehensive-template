@@ -334,7 +334,7 @@ Test the `run()` function directly for output verification:
 #[test]
 fn greet_output() {
     let cli = Cli::parse_from(["demo-cli", "greet", "Bob", "--uppercase"]);
-    assert_eq!(run(&cli), "HELLO, BOB!");
+    assert_eq!(run(&cli).expect("run succeeds"), "HELLO, BOB!");
 }
 ```
 

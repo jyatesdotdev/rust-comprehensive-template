@@ -36,19 +36,22 @@ The lessons it exists to demonstrate:
 ### lib.rs
 
 The whole CLI surface: `Cli` (root parser), `Command`, all `Args` structs and
-sub-enums, plus `run()`, which maps a parsed `Cli` to an output `String`.
-Each subcommand exists to teach one clap feature (positional args, env
-binding, numeric `value_parser` ranges, nested subcommands, `ValueEnum`,
-`global = true` flags) — do not collapse them into fewer, cleverer examples.
-`run()` returning `String` instead of printing is what keeps the unit tests
-subprocess-free; preserve that shape.
+sub-enums, plus `run()`, which maps a parsed `Cli` to
+`Result<String, CliError>`. Each subcommand exists to teach one clap feature
+(positional args, env binding, numeric `value_parser` ranges, nested
+subcommands, `ValueEnum`, `global = true` flags) — do not collapse them into
+fewer, cleverer examples. `run()` returning a value instead of printing is
+what keeps the unit tests subprocess-free, and returning failures as `Err`
+(never as an error-shaped success `String`) is what lets `main` route them
+to stderr with a non-zero exit — both halves of that shape are load-bearing.
 
 ### main.rs
 
 Thin binary shim: parse, optionally dump `Cli` to **stderr** when verbose,
-print `run()`'s output to stdout (skipping empty output so `completions`
-does not get a stray blank line). Keep main.rs logic-free — any behavior you
-are tempted to add here belongs in `run()` where it can be unit tested.
+then match `run()` — `Ok` output goes to stdout (skipping empty output so
+`completions` does not get a stray blank line), `Err` goes to stderr with
+`ExitCode::FAILURE`. Keep main.rs logic-free — any behavior you are tempted
+to add here belongs in `run()` where it can be unit tested.
 
 ### config.rs
 

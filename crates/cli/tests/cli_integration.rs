@@ -167,6 +167,22 @@ fn serve_env_overrides_config_file() {
 }
 
 #[test]
+fn serve_config_error_hits_stderr_with_nonzero_exit() {
+    // stdout is the data stream: errors must land on stderr with a failure
+    // exit code, never as normal-looking output with exit 0.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "port = ").expect("write malformed config");
+
+    serve_cmd()
+        .args(["--config", path.to_str().expect("utf-8 path"), "serve"])
+        .assert()
+        .failure()
+        .stdout(predicate::str::is_empty())
+        .stderr(predicate::str::contains("config error"));
+}
+
+#[test]
 fn completions_bash() {
     cmd().args(["completions", "bash"]).assert().success();
 }

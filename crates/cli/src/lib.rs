@@ -147,18 +147,30 @@ pub enum DemoAction {
     },
 }
 
-/// Execute the parsed CLI command, returning output as a String.
-pub fn run(cli: &Cli) -> String {
+/// Errors `run()` can produce.
+///
+/// Failures must reach the caller as `Err` — never as a formatted string in
+/// the success value — so `main` can route them to stderr with a non-zero
+/// exit code (the contract the integration tests assert).
+#[derive(Debug, thiserror::Error)]
+pub enum CliError {
+    /// Loading or merging layered configuration failed.
+    #[error("config error: {0}")]
+    Config(#[from] figment::Error),
+}
+
+/// Execute the parsed CLI command, returning stdout-bound output as a String.
+pub fn run(cli: &Cli) -> Result<String, CliError> {
     match &cli.command {
         Command::Greet(args) => {
             let mut greeting = format!("Hello, {}!", args.name);
             if args.uppercase {
                 greeting = greeting.to_uppercase();
             }
-            std::iter::repeat(greeting)
+            Ok(std::iter::repeat(greeting)
                 .take(args.count as usize)
                 .collect::<Vec<_>>()
-                .join("\n")
+                .join("\n"))
         }
         Command::Serve(args) => {
             // Merge config file + env vars + CLI flags via figment. Fields the
@@ -168,29 +180,27 @@ pub fn run(cli: &Cli) -> String {
                 port: args.port,
                 tls_cert: args.tls_cert.clone(),
             };
-            match config::load_config(&cli.config, overrides) {
-                Ok(cfg) => format!(
-                    "Starting server on {}:{} (workers={}, log={})",
-                    cfg.host, cfg.port, cfg.workers, cfg.log_level
-                ),
-                Err(e) => format!("Config error: {e}"),
-            }
+            let cfg = config::load_config(&cli.config, overrides)?;
+            Ok(format!(
+                "Starting server on {}:{} (workers={}, log={})",
+                cfg.host, cfg.port, cfg.workers, cfg.log_level
+            ))
         }
         Command::Config(cmd) => match &cmd.action {
-            ConfigAction::Get { key } => format!("config.get({key})"),
-            ConfigAction::Set { key, value } => format!("config.set({key}, {value})"),
-            ConfigAction::List => "config.list()".to_string(),
+            ConfigAction::Get { key } => Ok(format!("config.get({key})")),
+            ConfigAction::Set { key, value } => Ok(format!("config.set({key}, {value})")),
+            ConfigAction::List => Ok("config.list()".to_string()),
         },
         Command::Demo(cmd) => match &cmd.action {
-            DemoAction::Colors => interactive::demo_colors(),
+            DemoAction::Colors => Ok(interactive::demo_colors()),
             DemoAction::Progress { steps } => {
                 interactive::demo_progress(*steps);
-                "Progress complete.".to_string()
+                Ok("Progress complete.".to_string())
             }
         },
         Command::Completions { shell } => {
             completions::print_completions(*shell);
-            String::new()
+            Ok(String::new())
         }
     }
 }
@@ -215,7 +225,7 @@ mod tests {
             }
             _ => panic!("expected Greet"),
         }
-        assert_eq!(run(&cli), "Hello, Alice!");
+        assert_eq!(run(&cli).expect("run succeeds"), "Hello, Alice!");
     }
 
     #[test]
@@ -228,7 +238,10 @@ mod tests {
             }
             _ => panic!("expected Greet"),
         }
-        assert_eq!(run(&cli), "HELLO, BOB!\nHELLO, BOB!\nHELLO, BOB!");
+        assert_eq!(
+            run(&cli).expect("run succeeds"),
+            "HELLO, BOB!\nHELLO, BOB!\nHELLO, BOB!"
+        );
     }
 
     #[test]
@@ -279,19 +292,36 @@ mod tests {
     #[test]
     fn config_get() {
         let cli = parse(&["demo-cli", "config", "get", "key1"]);
-        assert_eq!(run(&cli), "config.get(key1)");
+        assert_eq!(run(&cli).expect("run succeeds"), "config.get(key1)");
     }
 
     #[test]
     fn config_set() {
         let cli = parse(&["demo-cli", "config", "set", "key1", "val1"]);
-        assert_eq!(run(&cli), "config.set(key1, val1)");
+        assert_eq!(run(&cli).expect("run succeeds"), "config.set(key1, val1)");
     }
 
     #[test]
     fn config_list() {
         let cli = parse(&["demo-cli", "config", "list"]);
-        assert_eq!(run(&cli), "config.list()");
+        assert_eq!(run(&cli).expect("run succeeds"), "config.list()");
+    }
+
+    #[test]
+    fn run_surfaces_config_error_as_err() {
+        // Malformed TOML fails at parse time regardless of what the env or
+        // CLI layers contain, keeping this test hermetic in-process.
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "port = ").expect("write config");
+
+        let cli = parse(&[
+            "demo-cli",
+            "--config",
+            path.to_str().expect("utf-8 path"),
+            "serve",
+        ]);
+        assert!(matches!(run(&cli), Err(CliError::Config(_))));
     }
 
     #[test]
