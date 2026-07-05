@@ -2,7 +2,10 @@
 //!
 //! Priority (highest wins): CLI flags > env vars > config file > defaults.
 
-use figment::{Figment, providers::{Format, Toml, Env, Serialized}};
+use figment::{
+    providers::{Env, Format, Serialized, Toml},
+    Figment,
+};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -67,7 +70,11 @@ mod tests {
     fn defaults_when_no_file_or_overrides() {
         let cfg = load_config(
             Path::new("nonexistent.toml"),
-            CliOverrides { host: None, port: None, tls_cert: None },
+            CliOverrides {
+                host: None,
+                port: None,
+                tls_cert: None,
+            },
         )
         .unwrap();
         assert_eq!(cfg, AppConfig::default());
@@ -80,7 +87,11 @@ mod tests {
 
         let cfg = load_config(
             tmp.path(),
-            CliOverrides { host: None, port: None, tls_cert: None },
+            CliOverrides {
+                host: None,
+                port: None,
+                tls_cert: None,
+            },
         )
         .unwrap();
         assert_eq!(cfg.port, 3000);
@@ -95,7 +106,11 @@ mod tests {
 
         let cfg = load_config(
             tmp.path(),
-            CliOverrides { host: None, port: Some(9090), tls_cert: None },
+            CliOverrides {
+                host: None,
+                port: Some(9090),
+                tls_cert: None,
+            },
         )
         .unwrap();
         assert_eq!(cfg.port, 9090); // CLI wins

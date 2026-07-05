@@ -44,10 +44,7 @@ fn missing_subcommand_fails() {
 
 #[test]
 fn invalid_count_fails() {
-    cmd()
-        .args(["greet", "X", "-n", "0"])
-        .assert()
-        .failure();
+    cmd().args(["greet", "X", "-n", "0"]).assert().failure();
 }
 
 #[test]
@@ -77,21 +74,101 @@ fn config_get_subcommand() {
         .stdout(predicate::str::contains("config.get(mykey)"));
 }
 
+/// Strip env vars that `serve` reads (clap `env = ...` bindings and the
+/// figment `APP_` layer) so tests stay hermetic regardless of the caller's
+/// shell environment.
+fn serve_cmd() -> Command {
+    let mut c = cmd();
+    for var in [
+        "HOST",
+        "PORT",
+        "APP_HOST",
+        "APP_PORT",
+        "APP_WORKERS",
+        "APP_LOG_LEVEL",
+        "APP_TLS_CERT",
+    ] {
+        c.env_remove(var);
+    }
+    c
+}
+
 #[test]
 fn serve_defaults() {
-    cmd()
+    serve_cmd()
         .args(["serve"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Starting server on 127.0.0.1:8080"));
+        .stdout(predicate::str::contains(
+            "Starting server on 127.0.0.1:8080",
+        ));
+}
+
+#[test]
+fn serve_reads_config_file() {
+    // workers/log_level have no CLI flag, so they demonstrate the figment
+    // file layer end-to-end. Config lives in a temp dir to stay hermetic.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "workers = 16\nlog_level = \"debug\"\n").expect("write config");
+
+    serve_cmd()
+        .args(["--config", path.to_str().expect("utf-8 path"), "serve"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("workers=16, log=debug"));
+}
+
+#[test]
+fn serve_config_file_sets_host_and_port() {
+    // host/port flags are Option<T>: unset flags must not shadow the file layer.
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "host = \"0.0.0.0\"\nport = 3000\n").expect("write config");
+
+    serve_cmd()
+        .args(["--config", path.to_str().expect("utf-8 path"), "serve"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Starting server on 0.0.0.0:3000"));
+}
+
+#[test]
+fn serve_cli_flag_overrides_config_file() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "port = 3000\n").expect("write config");
+
+    serve_cmd()
+        .args([
+            "--config",
+            path.to_str().expect("utf-8 path"),
+            "serve",
+            "--port",
+            "9090",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(":9090"));
+}
+
+#[test]
+fn serve_env_overrides_config_file() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let path = dir.path().join("config.toml");
+    std::fs::write(&path, "workers = 16\n").expect("write config");
+
+    serve_cmd()
+        .args(["--config", path.to_str().expect("utf-8 path"), "serve"])
+        .env("APP_WORKERS", "2")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("workers=2"));
 }
 
 #[test]
 fn completions_bash() {
-    cmd()
-        .args(["completions", "bash"])
-        .assert()
-        .success();
+    cmd().args(["completions", "bash"]).assert().success();
 }
 
 #[test]

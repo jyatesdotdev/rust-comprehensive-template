@@ -7,7 +7,7 @@ pub mod completions;
 pub mod config;
 pub mod interactive;
 
-use clap::{Parser, Subcommand, Args, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use std::path::PathBuf;
 
@@ -82,13 +82,17 @@ pub struct GreetArgs {
 /// Arguments for the `serve` subcommand.
 #[derive(Args, Debug)]
 pub struct ServeArgs {
-    /// Host to bind to (reads from HOST env var)
-    #[arg(long, default_value = "127.0.0.1", env = "HOST")]
-    pub host: String,
+    /// Host to bind to (reads from HOST env var; defaults to config value or 127.0.0.1)
+    ///
+    /// `Option` is load-bearing: with a clap `default_value` this flag would
+    /// always be `Some`, and the CLI layer would clobber the config-file and
+    /// `APP_*` env layers in figment even when the user never passed `--host`.
+    #[arg(long, env = "HOST")]
+    pub host: Option<String>,
 
-    /// Port to listen on (reads from PORT env var, must be 1-65535)
-    #[arg(long, default_value_t = 8080, env = "PORT", value_parser = clap::value_parser!(u16).range(1..))]
-    pub port: u16,
+    /// Port to listen on (reads from PORT env var, must be 1-65535; defaults to config value or 8080)
+    #[arg(long, env = "PORT", value_parser = clap::value_parser!(u16).range(1..))]
+    pub port: Option<u16>,
 
     /// TLS certificate file
     #[arg(long, value_name = "FILE")]
@@ -157,14 +161,18 @@ pub fn run(cli: &Cli) -> String {
                 .join("\n")
         }
         Command::Serve(args) => {
-            // Merge config file + env vars + CLI flags via figment
+            // Merge config file + env vars + CLI flags via figment. Fields the
+            // user did not set stay None so they don't shadow lower layers.
             let overrides = config::CliOverrides {
-                host: Some(args.host.clone()),
-                port: Some(args.port),
+                host: args.host.clone(),
+                port: args.port,
                 tls_cert: args.tls_cert.clone(),
             };
             match config::load_config(&cli.config, overrides) {
-                Ok(cfg) => format!("Starting server on {}:{} (workers={}, log={})", cfg.host, cfg.port, cfg.workers, cfg.log_level),
+                Ok(cfg) => format!(
+                    "Starting server on {}:{} (workers={}, log={})",
+                    cfg.host, cfg.port, cfg.workers, cfg.log_level
+                ),
                 Err(e) => format!("Config error: {e}"),
             }
         }
@@ -183,7 +191,7 @@ pub fn run(cli: &Cli) -> String {
         Command::Completions { shell } => {
             completions::print_completions(*shell);
             String::new()
-        },
+        }
     }
 }
 
@@ -236,12 +244,14 @@ mod tests {
     }
 
     #[test]
-    fn serve_defaults() {
+    fn serve_defaults_leave_overrides_unset() {
+        // No flags → both None, so figment's file/env layers stay visible.
+        // (Effective defaults come from AppConfig::default, not clap.)
         let cli = parse(&["demo-cli", "serve"]);
         match &cli.command {
             Command::Serve(a) => {
-                assert_eq!(a.host, "127.0.0.1");
-                assert_eq!(a.port, 8080);
+                assert!(a.host.is_none());
+                assert!(a.port.is_none());
                 assert!(a.tls_cert.is_none());
             }
             _ => panic!("expected Serve"),
@@ -253,8 +263,8 @@ mod tests {
         let cli = parse(&["demo-cli", "serve", "--host", "0.0.0.0", "--port", "3000"]);
         match &cli.command {
             Command::Serve(a) => {
-                assert_eq!(a.host, "0.0.0.0");
-                assert_eq!(a.port, 3000);
+                assert_eq!(a.host.as_deref(), Some("0.0.0.0"));
+                assert_eq!(a.port, Some(3000));
             }
             _ => panic!("expected Serve"),
         }

@@ -101,14 +101,20 @@ Key patterns:
 Clap can read values from environment variables as a fallback:
 
 ```rust
-#[arg(long, default_value = "127.0.0.1", env = "HOST")]
-pub host: String,
+#[arg(long, env = "HOST")]
+pub host: Option<String>,
 
-#[arg(long, default_value_t = 8080, env = "PORT")]
-pub port: u16,
+#[arg(long, env = "PORT")]
+pub port: Option<u16>,
 ```
 
-Priority: explicit CLI flag > env var > default value.
+Priority: explicit CLI flag > env var > `None`.
+
+Note these args are `Option<T>` with **no** clap `default_value`. When a
+CLI value also participates in layered config (next section), a clap default
+would make the flag always-present, silently shadowing the config-file and
+`APP_*` env layers. Keep the effective default in `AppConfig::default()` and
+let clap report "not provided" as `None`.
 
 ### ValueEnum
 
