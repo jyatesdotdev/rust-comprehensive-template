@@ -1,6 +1,6 @@
 # Rust Comprehensive Template
 
-A Cargo workspace showcasing memory safety, performance, and modern systems programming in Rust. Nine crates cover web APIs, databases, high-performance computing, ETL pipelines, systems programming, design patterns, simulations, and testing — each with working examples and tests.
+A Cargo workspace showcasing memory safety, performance, and modern systems programming in Rust. Ten crates cover web APIs, databases, high-performance computing, ETL pipelines, systems programming, design patterns, simulations, testing, and CLI development — each with working examples and tests.
 
 ## Quick Start
 
@@ -42,7 +42,8 @@ rust-template/
     ├── systems/         # Unsafe Rust, FFI, manual memory management
     ├── patterns/        # Builder, newtype, typestate, strategy patterns
     ├── simulation/      # Numerical methods, physics, ECS
-    └── testing/         # Unit, integration, property-based tests, benchmarks
+    ├── testing/         # Unit, integration, property-based tests, benchmarks
+    └── cli/             # Clap CLI binary with config, completions, interactive mode
 ```
 
 ## Crates
@@ -136,7 +137,7 @@ Workspace-level settings in the root `Cargo.toml`:
 - **Edition:** 2021
 - **MSRV:** 1.75
 - **Release profile:** `opt-level = 3`, thin LTO, single codegen unit, stripped binaries
-- **Lints:** Clippy `warn` on `all`, `pedantic`, `nursery`; `warn` on `unwrap_used`/`expect_used`
+- **Lints:** Clippy `all` at `warn` (CI runs `-D warnings`, so warnings block merges); panic-style lints (`unwrap_used`, `expect_used`, …) are deliberately `allow`ed so idiomatic test code and the intentionally-unsafe `systems` crate compile — see `AGENTS.md` for the convention that library code must still avoid them
 
 ## Documentation
 

@@ -14,7 +14,8 @@ rust-template/
 ├── Makefile                # Security scanning targets
 ├── .github/
 │   └── workflows/
-│       └── security.yml    # CI: audit, deny, clippy, geiger, semver-checks
+│       ├── ci.yml          # CI: tests with coverage gate (cargo-llvm-cov, ≥80% lines)
+│       └── security.yml    # CI: audit, deny, clippy, geiger, semver-checks, trivy
 ├── docs/
 │   ├── ARCHITECTURE.md             # ← this file
 │   ├── TOOLCHAIN.md                # Required tools and editor setup
@@ -127,6 +128,10 @@ The `Makefile` provides security scanning targets:
 
 ### CI Pipeline
 
+`.github/workflows/ci.yml` runs on push to `main` and PRs. It executes the full
+test suite under `cargo llvm-cov --workspace --fail-under-lines 80` — the build
+fails if line coverage drops below 80%, so new code must ship with tests.
+
 `.github/workflows/security.yml` runs on push to `main`, PRs, weekly schedule, and manual dispatch.
 
 **Blocking jobs** (fail the build):
@@ -152,11 +157,11 @@ The `Makefile` provides security scanning targets:
 
 Lint levels are set in `Cargo.toml` under `[workspace.lints.clippy]` and inherited by all crates via `[lints] workspace = true`. Key categories:
 
-- **Baseline:** `all`, `pedantic`, `nursery` at `warn`
-- **Panic vectors:** `unwrap_used`, `expect_used`, `panic`, `indexing_slicing` at `warn`
-- **Arithmetic/type safety:** `arithmetic_side_effects`, `as_conversions` at `warn`
-- **Unsafe hygiene:** `undocumented_unsafe_blocks` at `deny`
-- **Production hygiene:** `dbg_macro`, `print_stdout`, `exit` at `warn`
+- **Baseline:** `all` at `warn` — and because the security CI job runs clippy with `-D warnings`, every warning is a hard error in CI
+- **Panic vectors:** `unwrap_used`, `expect_used`, `panic`, `indexing_slicing` at `allow` — deliberately, because `-D warnings` would otherwise reject idiomatic test code and the intentionally-unsafe `systems` crate; library code is still expected to avoid them by convention (see `AGENTS.md`)
+- **Arithmetic/type safety:** `arithmetic_side_effects`, `as_conversions` at `allow` for the same reason
+- **Hygiene:** `todo`, `unimplemented`, `unreachable`, `dbg_macro` at `warn` (i.e. errors in CI); `print_stdout`/`print_stderr` allowed because the CLI crate prints by design
+- **Filesystem security:** `filetype_is_file`, `verbose_file_reads` at `warn`
 
 ## Release Profile
 
