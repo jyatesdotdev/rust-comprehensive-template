@@ -11,6 +11,9 @@ members = [
     "crates/simulation",
     "crates/testing",
     "crates/cli",
+    "crates/math",
+    "crates/ml",
+    "crates/render",
 ]
 
 [workspace.package]

@@ -21,8 +21,9 @@ Consequences for every edit you make:
   technique itself.
 - **Keep crates self-contained.** A reader should be able to lift one crate out
   of the workspace. Never add a dependency from one domain crate to another —
-  `common` is the only permitted internal dependency, and `patterns`/`cli`
-  deliberately depend on nothing internal at all.
+  the only permitted internal dependencies are the two foundation crates:
+  `common` (error types, `Entity`) and `math` (linear algebra, used by
+  `render`). `patterns`/`cli` deliberately depend on nothing internal at all.
 
 ## Hard rules — CI rejects violations
 
@@ -105,6 +106,9 @@ still compiles.
 | `simulation` | numerical methods, physics, minimal ECS | `crates/simulation/src/AGENTS.md` |
 | `testing` | unit / property / integration tests, Criterion | `crates/testing/src/AGENTS.md` |
 | `cli` | clap binary, figment config, completions | `crates/cli/src/AGENTS.md` |
+| `math` | hand-rolled linear algebra (foundation crate) | `crates/math/src/AGENTS.md` |
+| `ml` | scalar autograd, NN training end-to-end | `crates/ml/src/AGENTS.md` |
+| `render` | ray geometry, camera pipeline, color (uses `math`) | `crates/render/src/AGENTS.md` |
 
 Reference docs for humans live in `docs/` (ARCHITECTURE, TUTORIAL, EXTENDING,
 MEMORY_SAFETY_AND_CONCURRENCY, SECURITY_SCANNING, cli). Keep them in sync when
