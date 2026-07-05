@@ -41,3 +41,26 @@ impl Entity {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_generates_unique_ids() {
+        let a = Entity::new("a");
+        let b = Entity::new("a");
+        assert!(!a.id.is_nil());
+        assert_ne!(a.id, b.id, "each entity must get its own UUID");
+    }
+
+    #[test]
+    fn serde_round_trip() {
+        let entity = Entity::new("resource");
+        let json = serde_json::to_string(&entity).unwrap();
+        let back: Entity = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.id, entity.id);
+        assert_eq!(back.name, entity.name);
+        assert_eq!(back.created_at, entity.created_at);
+    }
+}

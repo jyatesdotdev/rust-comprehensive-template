@@ -74,9 +74,8 @@ mod tests {
     #[test]
     fn filter_map() {
         let data: Vec<i32> = (0..10).collect();
-        let evens: Vec<i32> = parallel_filter_map(&data, |x| {
-            if x % 2 == 0 { Some(x * 10) } else { None }
-        });
+        let evens: Vec<i32> =
+            parallel_filter_map(&data, |x| if x % 2 == 0 { Some(x * 10) } else { None });
         assert_eq!(evens.len(), 5);
         assert!(evens.contains(&0));
         assert!(evens.contains(&40));

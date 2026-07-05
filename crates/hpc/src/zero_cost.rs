@@ -9,11 +9,15 @@ pub trait Accumulate: Default + Copy {
 }
 
 impl Accumulate for f64 {
-    fn add(self, other: Self) -> Self { self + other }
+    fn add(self, other: Self) -> Self {
+        self + other
+    }
 }
 
 impl Accumulate for i64 {
-    fn add(self, other: Self) -> Self { self + other }
+    fn add(self, other: Self) -> Self {
+        self + other
+    }
 }
 
 /// Generic sum — compiles to the same code as a hand-written loop for each type.
@@ -47,10 +51,7 @@ impl Meters {
 
 /// Iterator adapter that fuses map + filter in a single pass (zero allocation).
 pub fn sum_positive_squares(data: &[f64]) -> f64 {
-    data.iter()
-        .filter(|&&x| x > 0.0)
-        .map(|x| x * x)
-        .sum()
+    data.iter().filter(|&&x| x > 0.0).map(|x| x * x).sum()
 }
 
 #[cfg(test)]

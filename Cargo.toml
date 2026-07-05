@@ -44,14 +44,16 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Parallelism
+# Parallelism & channels
 rayon = "1.10"
+async-channel = "2"
 
 # Testing
 proptest = "1"
 criterion = { version = "0.5", features = ["html_reports"] }
 assert_cmd = "2"
 predicates = "3"
+tempfile = "3"
 
 # System interfaces
 libc = "0.2"

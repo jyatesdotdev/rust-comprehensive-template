@@ -28,7 +28,9 @@ where
     type Output = B::Output;
 
     fn process(&self, input: Self::Input) -> Option<Self::Output> {
-        self.first.process(input).and_then(|mid| self.second.process(mid))
+        self.first
+            .process(input)
+            .and_then(|mid| self.second.process(mid))
     }
 }
 
@@ -39,7 +41,10 @@ pub trait StageExt: Stage + Sized {
     where
         B: Stage<Input = Self::Output>,
     {
-        Chain { first: self, second: next }
+        Chain {
+            first: self,
+            second: next,
+        }
     }
 }
 
@@ -53,12 +58,18 @@ pub struct MapStage<F, I, O> {
 
 /// Create a stage from a mapping function (always produces output).
 pub fn map_stage<I, O, F: Fn(I) -> O>(f: F) -> MapStage<impl Fn(I) -> Option<O>, I, O> {
-    MapStage { f: move |input| Some(f(input)), _marker: std::marker::PhantomData }
+    MapStage {
+        f: move |input| Some(f(input)),
+        _marker: std::marker::PhantomData,
+    }
 }
 
 /// Create a stage from a filter-map function (may drop items).
 pub fn filter_stage<I, O, F: Fn(I) -> Option<O>>(f: F) -> MapStage<F, I, O> {
-    MapStage { f, _marker: std::marker::PhantomData }
+    MapStage {
+        f,
+        _marker: std::marker::PhantomData,
+    }
 }
 
 impl<I, O, F: Fn(I) -> Option<O>> Stage for MapStage<F, I, O> {
@@ -75,7 +86,9 @@ where
     S: Stage,
     I: IntoIterator<Item = S::Input>,
 {
-    data.into_iter().filter_map(|item| stage.process(item)).collect()
+    data.into_iter()
+        .filter_map(|item| stage.process(item))
+        .collect()
 }
 
 #[cfg(test)]

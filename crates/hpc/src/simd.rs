@@ -33,6 +33,8 @@ pub unsafe fn dot_product_sse(a: &[f32], b: &[f32]) -> f32 {
 
     for i in 0..chunks {
         let offset = i * 4;
+        // SAFETY: `offset + 4 <= chunks * 4 <= a.len() == b.len()`, so both
+        // unaligned 4-lane loads stay in bounds; `loadu` needs no alignment.
         let va = _mm_loadu_ps(a.as_ptr().add(offset));
         let vb = _mm_loadu_ps(b.as_ptr().add(offset));
         acc = _mm_add_ps(acc, _mm_mul_ps(va, vb));
@@ -76,6 +78,8 @@ mod tests {
         let a: Vec<f32> = (0..10).map(|i| i as f32).collect();
         let b: Vec<f32> = (0..10).map(|i| (i * 2) as f32).collect();
         let expected = dot_product(&a, &b);
+        // SAFETY: SSE is part of the x86_64 baseline ISA, so the CPU-support
+        // precondition of `dot_product_sse` always holds under this cfg.
         let sse_result = unsafe { dot_product_sse(&a, &b) };
         assert!((sse_result - expected).abs() < 1e-3);
     }

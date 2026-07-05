@@ -168,9 +168,7 @@ pub trait ResultExt<T> {
     fn context_app(self, msg: &str) -> Result<T>;
 }
 
-impl<T, E: std::error::Error + Send + Sync + 'static> ResultExt<T>
-    for std::result::Result<T, E>
-{
+impl<T, E: std::error::Error + Send + Sync + 'static> ResultExt<T> for std::result::Result<T, E> {
     fn context_app(self, msg: &str) -> Result<T> {
         self.map_err(|e| AppError::Internal(anyhow::Error::new(e).context(msg.to_owned())))
     }
@@ -223,7 +221,10 @@ mod tests {
             Err(std::io::Error::new(std::io::ErrorKind::Other, "disk full"));
         let app_result = result.context_app("writing cache");
         assert!(matches!(app_result, Err(AppError::Internal(_))));
-        assert!(app_result.unwrap_err().to_string().contains("writing cache"));
+        assert!(app_result
+            .unwrap_err()
+            .to_string()
+            .contains("writing cache"));
     }
 
     #[test]

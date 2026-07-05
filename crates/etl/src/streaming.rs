@@ -9,11 +9,7 @@ use tokio::sync::mpsc;
 ///
 /// Each stage runs concurrently. Bounded channels provide backpressure —
 /// fast producers block when slow consumers fall behind.
-pub async fn streaming_pipeline<T, U, F>(
-    source: Vec<T>,
-    transform: F,
-    buffer: usize,
-) -> Vec<U>
+pub async fn streaming_pipeline<T, U, F>(source: Vec<T>, transform: F, buffer: usize) -> Vec<U>
 where
     T: Send + 'static,
     U: Send + 'static,
@@ -88,7 +84,9 @@ where
             }
         });
     }
-    drop(tx_out); // Close when all workers finish.
+    // Drop the original sender: the output channel closes once every
+    // worker's clone is also dropped, which ends the collection loop below.
+    drop(tx_out);
 
     let mut results = Vec::new();
     while let Some(item) = rx_out.recv().await {
@@ -104,7 +102,8 @@ mod tests {
     #[tokio::test]
     async fn streaming_filter_transform() {
         let data: Vec<i32> = (1..=10).collect();
-        let result = streaming_pipeline(data, |x| if x % 2 == 0 { Some(x * 10) } else { None }, 4).await;
+        let result =
+            streaming_pipeline(data, |x| if x % 2 == 0 { Some(x * 10) } else { None }, 4).await;
         assert_eq!(result, vec![20, 40, 60, 80, 100]);
     }
 

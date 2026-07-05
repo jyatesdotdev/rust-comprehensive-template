@@ -121,6 +121,14 @@ mod tests {
     }
 
     #[test]
+    fn rle_run_longer_than_255_splits() {
+        // A run of 300 identical bytes must split at the u8 count limit:
+        // (255, b'x') followed by (45, b'x').
+        let compressed = RleCompressor.compress(&[b'x'; 300]);
+        assert_eq!(compressed, vec![255, b'x', 45, b'x']);
+    }
+
+    #[test]
     fn enum_dispatch() {
         let c = CompressorKind::Rle;
         assert_eq!(c.name(), "rle");

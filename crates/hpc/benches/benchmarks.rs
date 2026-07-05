@@ -13,6 +13,8 @@ fn bench_dot_product(c: &mut Criterion) {
 
     #[cfg(target_arch = "x86_64")]
     c.bench_function("dot_product_sse", |bencher| {
+        // SAFETY: SSE is part of the x86_64 baseline ISA, so the CPU-support
+        // precondition of `dot_product_sse` always holds under this cfg.
         bencher.iter(|| unsafe { simd::dot_product_sse(black_box(&a), black_box(&b)) })
     });
 }
@@ -34,5 +36,10 @@ fn bench_generic_sum(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_dot_product, bench_parallel_sort, bench_generic_sum);
+criterion_group!(
+    benches,
+    bench_dot_product,
+    bench_parallel_sort,
+    bench_generic_sum
+);
 criterion_main!(benches);

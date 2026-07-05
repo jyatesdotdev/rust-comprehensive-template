@@ -16,7 +16,9 @@ pub struct Record {
 impl Record {
     /// Create a record from string slices.
     pub fn new(fields: Vec<&str>) -> Self {
-        Self { fields: fields.into_iter().map(String::from).collect() }
+        Self {
+            fields: fields.into_iter().map(String::from).collect(),
+        }
     }
 
     /// Get the field at `idx`, or `None` if out of bounds.
@@ -68,18 +70,26 @@ where
     I::Item: IntoIterator<Item = T>,
     F: Fn(T) -> U,
 {
-    nested.into_iter().flat_map(|inner| inner.into_iter()).map(f).collect()
+    nested
+        .into_iter()
+        .flat_map(|inner| inner.into_iter())
+        .map(f)
+        .collect()
 }
 
 /// Top-N selection using partial sort via `select_nth_unstable`.
+///
+/// If `n >= data.len()`, the whole slice is sorted and returned.
+/// Uses `f64::total_cmp` so NaN inputs cannot panic (positive NaN
+/// compares greater than every number, so it ranks first if present).
 pub fn top_n(data: &mut [f64], n: usize) -> &[f64] {
     if n >= data.len() {
-        data.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap());
+        data.sort_unstable_by(|a, b| b.total_cmp(a));
         return data;
     }
-    data.select_nth_unstable_by(n, |a, b| b.partial_cmp(a).unwrap());
+    data.select_nth_unstable_by(n, |a, b| b.total_cmp(a));
     let slice = &mut data[..n];
-    slice.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap());
+    slice.sort_unstable_by(|a, b| b.total_cmp(a));
     slice
 }
 
@@ -121,5 +131,22 @@ mod tests {
         let mut data = vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0];
         let top = top_n(&mut data, 3);
         assert_eq!(top, &[9.0, 5.0, 4.0]);
+    }
+
+    #[test]
+    fn top_n_larger_than_input_returns_all_sorted() {
+        let mut data = vec![3.0, 1.0, 2.0];
+        let top = top_n(&mut data, 10);
+        assert_eq!(top, &[3.0, 2.0, 1.0]);
+    }
+
+    #[test]
+    fn top_n_tolerates_nan() {
+        // Before switching to `total_cmp` this panicked; now NaN ranks first
+        // (positive NaN is the maximum in the IEEE total order).
+        let mut data = vec![f64::NAN, 5.0, 1.0, 3.0];
+        let top = top_n(&mut data, 2);
+        assert!(top[0].is_nan());
+        assert_eq!(top[1], 5.0);
     }
 }

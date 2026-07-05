@@ -85,6 +85,14 @@ mod tests {
     }
 
     #[test]
+    fn default_is_empty() {
+        let s: SortedSet<i32> = SortedSet::default();
+        assert!(s.is_empty());
+        assert_eq!(s.len(), 0);
+        assert!(!s.contains(&0));
+    }
+
+    #[test]
     fn from_iterator_deduplicates() {
         let s: SortedSet<i32> = vec![5, 3, 5, 1, 3].into_iter().collect();
         assert_eq!(s.as_slice(), &[1, 3, 5]);

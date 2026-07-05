@@ -40,10 +40,10 @@ impl ApiClient {
             .map_err(|e| AppError::internal(e))?;
 
         if !resp.status().is_success() {
-            return Err(AppError::internal(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("HTTP {}", resp.status()),
-            )));
+            return Err(AppError::internal(std::io::Error::other(format!(
+                "HTTP {}",
+                resp.status()
+            ))));
         }
 
         resp.json().await.map_err(|e| AppError::internal(e))
@@ -65,10 +65,10 @@ impl ApiClient {
             .map_err(|e| AppError::internal(e))?;
 
         if !resp.status().is_success() {
-            return Err(AppError::internal(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("HTTP {}", resp.status()),
-            )));
+            return Err(AppError::internal(std::io::Error::other(format!(
+                "HTTP {}",
+                resp.status()
+            ))));
         }
 
         resp.json().await.map_err(|e| AppError::internal(e))

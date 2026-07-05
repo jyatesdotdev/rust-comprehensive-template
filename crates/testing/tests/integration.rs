@@ -40,9 +40,7 @@ fn math_functions_compose() {
 #[tokio::test]
 async fn async_sorted_set_build() {
     // Simulate collecting results from async tasks into a SortedSet.
-    let handles: Vec<_> = (0..5)
-        .map(|i| tokio::spawn(async move { i * 2 }))
-        .collect();
+    let handles: Vec<_> = (0..5).map(|i| tokio::spawn(async move { i * 2 })).collect();
 
     let mut set = SortedSet::new();
     for h in handles {

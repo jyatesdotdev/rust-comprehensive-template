@@ -1,6 +1,7 @@
 //! Minimal Entity Component System (ECS) pattern.
 //!
-//! Demonstrates the archetype-free, sparse-set style ECS using `TypeId` + `Any`.
+//! Demonstrates an archetype-free ECS with sparse, hash-map-backed storage keyed
+//! by `TypeId` + `Any` (production ECS crates use dense sparse-set arrays instead).
 
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
@@ -21,7 +22,10 @@ pub struct World {
 impl World {
     /// Create an empty world with no entities or components.
     pub fn new() -> Self {
-        Self { next_id: 0, storage: HashMap::new() }
+        Self {
+            next_id: 0,
+            storage: HashMap::new(),
+        }
     }
 
     /// Spawn a new entity (no components yet).
@@ -61,9 +65,8 @@ impl World {
             .get(&TypeId::of::<T>())
             .into_iter()
             .flat_map(|map| {
-                map.iter().filter_map(|(&id, val)| {
-                    val.downcast_ref::<T>().map(|c| (Entity(id), c))
-                })
+                map.iter()
+                    .filter_map(|(&id, val)| val.downcast_ref::<T>().map(|c| (Entity(id), c)))
             })
     }
 }
@@ -97,10 +100,7 @@ pub struct Velocity {
 /// A "system" that moves all entities with both Position and Velocity.
 pub fn movement_system(world: &mut World, dt: f64) {
     // Collect entities that have Velocity first (can't borrow world mutably while iterating).
-    let updates: Vec<_> = world
-        .query::<Velocity>()
-        .map(|(e, &v)| (e, v))
-        .collect();
+    let updates: Vec<_> = world.query::<Velocity>().map(|(e, &v)| (e, v)).collect();
 
     for (entity, vel) in updates {
         if let Some(pos) = world.get_mut::<Position>(entity) {

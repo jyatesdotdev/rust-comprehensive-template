@@ -25,7 +25,11 @@ where
 }
 
 /// Parallel group-by: partition items by key, sum values per group.
-pub fn par_group_sum<T, K, KeyFn, ValFn>(data: &[T], key_fn: KeyFn, val_fn: ValFn) -> HashMap<K, f64>
+pub fn par_group_sum<T, K, KeyFn, ValFn>(
+    data: &[T],
+    key_fn: KeyFn,
+    val_fn: ValFn,
+) -> HashMap<K, f64>
 where
     T: Sync,
     K: Eq + Hash + Send,
@@ -101,9 +105,7 @@ mod tests {
     #[test]
     fn parallel_batch() {
         let data: Vec<i32> = (1..=10).collect();
-        let result = par_batch_process(data, 3, |batch| {
-            batch.into_iter().map(|x| x * 2).collect()
-        });
+        let result = par_batch_process(data, 3, |batch| batch.into_iter().map(|x| x * 2).collect());
         let mut sorted = result;
         sorted.sort();
         assert_eq!(sorted, vec![2, 4, 6, 8, 10, 12, 14, 16, 18, 20]);

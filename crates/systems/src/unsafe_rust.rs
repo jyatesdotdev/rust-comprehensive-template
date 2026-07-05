@@ -19,10 +19,19 @@ pub struct RawStack<T> {
 
 impl<T> RawStack<T> {
     /// Create a stack with the given fixed capacity.
+    ///
+    /// # Panics
+    /// Panics if `cap` is zero, `T` is zero-sized, or allocation fails.
     pub fn new(cap: usize) -> Self {
         assert!(cap > 0);
+        // `alloc` with a zero-size layout is undefined behavior, and a ZST needs no
+        // storage anyway — a real Vec special-cases this; we reject it for clarity.
+        assert!(
+            std::mem::size_of::<T>() > 0,
+            "zero-sized types are not supported"
+        );
         let layout = std::alloc::Layout::array::<T>(cap).unwrap();
-        // SAFETY: layout has non-zero size (cap > 0, T is sized)
+        // SAFETY: layout has non-zero size (cap > 0 and size_of::<T>() > 0, both asserted).
         let ptr = unsafe { std::alloc::alloc(layout) as *mut T };
         assert!(!ptr.is_null(), "allocation failed");
         Self { ptr, len: 0, cap }
@@ -64,9 +73,12 @@ impl<T> Drop for RawStack<T> {
     fn drop(&mut self) {
         // Drop remaining elements
         for i in 0..self.len {
+            // SAFETY: slots 0..len hold initialized values written by `push` and not
+            // yet moved out by `pop`; each is dropped exactly once.
             unsafe { self.ptr.add(i).drop_in_place() };
         }
         let layout = std::alloc::Layout::array::<T>(self.cap).unwrap();
+        // SAFETY: `ptr` was allocated in `new` with this exact layout; freed once, here.
         unsafe { std::alloc::dealloc(self.ptr as *mut u8, layout) };
     }
 }
@@ -117,6 +129,9 @@ mod tests {
         assert_eq!(s.pop(), Some(3));
         assert_eq!(s.pop(), Some(2));
         assert_eq!(s.len(), 1);
+        assert_eq!(s.pop(), Some(1));
+        assert_eq!(s.pop(), None); // empty
+        assert!(s.is_empty());
     }
 
     #[test]

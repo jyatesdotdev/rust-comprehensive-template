@@ -8,7 +8,8 @@ pub fn integrate_trapezoidal(f: impl Fn(f64) -> f64, a: f64, b: f64, n: usize) -
     h * (f(a) / 2.0 + sum + f(b) / 2.0)
 }
 
-/// Newton-Raphson root finding. Returns `Some(root)` if converged within `max_iter`.
+/// Newton-Raphson root finding. Returns `Some(root)` if converged within `max_iter`,
+/// `None` if it fails to converge or hits a zero/non-finite derivative.
 pub fn newton_raphson(
     f: impl Fn(f64) -> f64,
     df: impl Fn(f64) -> f64,
@@ -18,6 +19,11 @@ pub fn newton_raphson(
 ) -> Option<f64> {
     for _ in 0..max_iter {
         let dx = f(x) / df(x);
+        // A zero derivative (or overflow) yields inf/NaN; bail out instead of
+        // letting NaN silently poison the remaining iterations.
+        if !dx.is_finite() {
+            return None;
+        }
         x -= dx;
         if dx.abs() < tol {
             return Some(x);
@@ -46,7 +52,11 @@ impl Mat {
 
     /// Create a zero-filled matrix of the given dimensions.
     pub fn zeros(rows: usize, cols: usize) -> Self {
-        Self { rows, cols, data: vec![0.0; rows * cols] }
+        Self {
+            rows,
+            cols,
+            data: vec![0.0; rows * cols],
+        }
     }
 
     /// Get the element at row `r`, column `c`.
@@ -92,6 +102,18 @@ mod tests {
         // x² - 2 = 0 → x = √2
         let root = newton_raphson(|x| x * x - 2.0, |x| 2.0 * x, 1.0, 1e-12, 100).unwrap();
         assert!((root - std::f64::consts::SQRT_2).abs() < 1e-10);
+    }
+
+    #[test]
+    fn newton_zero_derivative_returns_none() {
+        // f(x) = 1 has no root and df = 0 everywhere; must not loop on NaN.
+        assert!(newton_raphson(|_| 1.0, |_| 0.0, 1.0, 1e-9, 50).is_none());
+    }
+
+    #[test]
+    fn newton_no_convergence_returns_none() {
+        // One iteration is not enough to reach √2 to 1e-12 from x = 1.
+        assert!(newton_raphson(|x| x * x - 2.0, |x| 2.0 * x, 1.0, 1e-12, 1).is_none());
     }
 
     #[test]

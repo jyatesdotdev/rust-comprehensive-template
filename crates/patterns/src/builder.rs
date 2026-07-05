@@ -95,6 +95,9 @@ impl RequestBuilder<Set, Set> {
     /// Only callable when both method and url have been set.
     pub fn build(self) -> Request {
         Request {
+            // INVARIANT: `M = Set` / `U = Set` are only reachable through
+            // `method()` / `url()`, which store `Some(..)`, so these unwraps
+            // cannot panic. This is the one sanctioned unwrap in this crate.
             method: self.method.unwrap(),
             url: self.url.unwrap(),
             headers: self.headers,

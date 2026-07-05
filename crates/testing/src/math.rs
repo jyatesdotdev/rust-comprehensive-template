@@ -22,6 +22,9 @@ pub fn gcd(mut a: u64, mut b: u64) -> u64 {
 }
 
 /// Fibonacci via iterative accumulation. Returns the `n`-th Fibonacci number.
+///
+/// Uses `wrapping_add`, so results wrap modulo 2^64 for `n > 93`
+/// (the largest Fibonacci number that fits in a `u64` is `fibonacci(93)`).
 pub fn fibonacci(n: u32) -> u64 {
     match n {
         0 => 0,

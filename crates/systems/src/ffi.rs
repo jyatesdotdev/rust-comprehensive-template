@@ -7,12 +7,16 @@ use std::os::raw::c_char;
 
 /// Get the current process ID via libc.
 pub fn getpid() -> i32 {
+    // SAFETY: getpid takes no arguments, has no preconditions, and cannot fail.
     unsafe { libc::getpid() }
 }
 
 /// Get an environment variable via libc `getenv`. Returns `None` if unset.
 pub fn getenv(name: &str) -> Option<String> {
     let c_name = CString::new(name).ok()?;
+    // SAFETY: `c_name` is a valid NUL-terminated string. When getenv returns
+    // non-null it points to a valid NUL-terminated string; we copy it to an owned
+    // String before returning because later env mutations may invalidate it.
     unsafe {
         let ptr = libc::getenv(c_name.as_ptr());
         if ptr.is_null() {
@@ -25,6 +29,7 @@ pub fn getenv(name: &str) -> Option<String> {
 
 /// Get system page size via libc `sysconf`.
 pub fn page_size() -> usize {
+    // SAFETY: sysconf has no memory-safety preconditions; _SC_PAGESIZE is a valid name.
     unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize }
 }
 
@@ -58,6 +63,9 @@ pub fn c_style_foreach(data: &[i32], cb: extern "C" fn(i32)) {
 pub fn foreach_with_closure<F: FnMut(i32)>(data: &[i32], mut f: F) {
     // Trampoline: extern "C" function that casts context back to closure
     extern "C" fn trampoline<F: FnMut(i32)>(val: i32, ctx: *mut std::ffi::c_void) {
+        // SAFETY: `ctx` was created below from `&mut f`, which outlives every call
+        // made in the loop, and no other reference to `f` exists while the
+        // trampoline runs — so the reborrow is unique and valid.
         let f = unsafe { &mut *(ctx as *mut F) };
         f(val);
     }

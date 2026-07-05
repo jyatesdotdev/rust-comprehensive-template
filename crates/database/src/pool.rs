@@ -30,8 +30,8 @@ impl Default for PoolConfig {
 
 /// Create a configured SQLite connection pool.
 pub async fn create_pool(config: &PoolConfig) -> Result<SqlitePool, sqlx::Error> {
-    let options = SqliteConnectOptions::from_str(&config.url)?
-        .create_if_missing(config.create_if_missing);
+    let options =
+        SqliteConnectOptions::from_str(&config.url)?.create_if_missing(config.create_if_missing);
 
     SqlitePoolOptions::new()
         .max_connections(config.max_connections)

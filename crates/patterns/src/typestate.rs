@@ -66,7 +66,11 @@ impl Connection<Connected> {
 impl Connection<Authenticated> {
     /// Only available in authenticated state.
     pub fn query(&self, q: &str) -> String {
-        format!("executed '{}' on {} with token {}", q, self.addr, self.token.as_deref().unwrap())
+        // INVARIANT: the only way to reach `Authenticated` is via
+        // `authenticate()`, which stores `Some(token)`; the fallback is
+        // unreachable but keeps this library path panic-free by convention.
+        let token = self.token.as_deref().unwrap_or("<missing>");
+        format!("executed '{q}' on {} with token {token}", self.addr)
     }
 
     /// Disconnect, returning to the `Disconnected` state.

@@ -23,11 +23,7 @@ where
 }
 
 /// Producer-consumer via bounded mpsc channel.
-pub async fn producer_consumer<T, P, C, R>(
-    buffer: usize,
-    produce: P,
-    consume: C,
-) -> R
+pub async fn producer_consumer<T, P, C, R>(buffer: usize, produce: P, consume: C) -> R
 where
     T: Send + 'static,
     P: FnOnce(mpsc::Sender<T>) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
@@ -118,8 +114,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_request_response() {
-        let resp: String =
-            request_response(42, |n| async move { format!("answer: {n}") }).await;
+        let resp: String = request_response(42, |n| async move { format!("answer: {n}") }).await;
         assert_eq!(resp, "answer: 42");
     }
 

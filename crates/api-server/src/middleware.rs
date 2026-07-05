@@ -19,7 +19,12 @@ pub async fn request_id(mut req: Request, next: Next) -> Response {
         .headers()
         .get(&X_REQUEST_ID)
         .cloned()
-        .unwrap_or_else(|| HeaderValue::from_str(&Uuid::new_v4().to_string()).unwrap());
+        .unwrap_or_else(|| {
+            // A hyphenated UUID is always a valid ASCII header value, so this
+            // fallback is unreachable — it exists to keep library code panic-free.
+            HeaderValue::from_str(&Uuid::new_v4().to_string())
+                .unwrap_or_else(|_| HeaderValue::from_static("invalid-request-id"))
+        });
 
     req.headers_mut().insert(X_REQUEST_ID.clone(), id.clone());
 

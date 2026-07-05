@@ -18,7 +18,10 @@ impl TryFrom<EntityRow> for Entity {
 
     fn try_from(row: EntityRow) -> Result<Self, Self::Error> {
         Ok(Entity {
-            id: row.id.parse().map_err(|e| common::AppError::validation(format!("bad uuid: {e}")))?,
+            id: row
+                .id
+                .parse()
+                .map_err(|e| common::AppError::validation(format!("bad uuid: {e}")))?,
             name: row.name,
             created_at: row
                 .created_at
@@ -144,7 +147,9 @@ mod tests {
     use crate::{migrate, pool};
 
     async fn setup() -> EntityRepo {
-        let pool = pool::create_pool(&pool::PoolConfig::default()).await.unwrap();
+        let pool = pool::create_pool(&pool::PoolConfig::default())
+            .await
+            .unwrap();
         migrate::run(&pool).await.unwrap();
         EntityRepo::new(pool)
     }
@@ -182,6 +187,16 @@ mod tests {
 
         assert!(repo.delete(entity.id).await.unwrap());
         assert!(repo.find_by_id(entity.id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn operations_on_missing_id() {
+        let repo = setup().await;
+        let id = Uuid::new_v4();
+
+        assert!(repo.find_by_id(id).await.unwrap().is_none());
+        assert!(!repo.update_name(id, "ghost").await.unwrap());
+        assert!(!repo.delete(id).await.unwrap());
     }
 
     #[tokio::test]

@@ -41,12 +41,7 @@ pub async fn list_items(
     let items = state.items.read().await;
     let result: Vec<Item> = items
         .values()
-        .filter(|item| {
-            params
-                .tag
-                .as_ref()
-                .map_or(true, |t| item.tags.contains(t))
-        })
+        .filter(|item| params.tag.as_ref().map_or(true, |t| item.tags.contains(t)))
         .cloned()
         .collect();
     Json(result)
