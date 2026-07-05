@@ -113,11 +113,16 @@ Hand-rolled, pure-std `Vec2`/`Vec3`/`Vec4`, `Mat3`/`Mat4` (column-major), quater
 
 ### `ml` — Machine Learning From Scratch
 
-Micrograd-style scalar reverse-mode autograd (`Value` graph with `backward()`), a seeded MLP, SGD with momentum, and MSE/BCE losses — zero dependencies. Gradients are verified against finite differences, and an end-to-end test trains XOR to convergence deterministically.
+Micrograd-style scalar reverse-mode autograd (`Value` graph with `backward()`), a seeded MLP, SGD with momentum, and MSE/BCE losses — zero dependencies. A parallel `Tensor` module makes the jump to batched autograd: matmul backward, explicit row-broadcast for biases, and XOR trained as a single 4×2 batch. All gradients are verified against finite differences.
 
 ### `render` — Rendering Geometry
 
-Ray–sphere/AABB/plane intersection, a `Camera` that runs the point-to-pixel pipeline both directions (project and ray-cast), linear-vs-sRGB color handling, and a minimal Lambertian ray tracer that renders to an in-memory framebuffer with PPM output. Built entirely on `math`.
+Ray–sphere/AABB/plane intersection, a `Camera` that runs the point-to-pixel pipeline both directions (project and ray-cast), linear-vs-sRGB color handling, and a small ray tracer with Lambertian shading, shadow rays, and depth-limited reflection. Built entirely on `math`.
+
+```bash
+# Render a 90-frame N-body orbit (simulation + render composing) to target/nbody-frames/
+cargo run -p render --example nbody --release
+```
 
 ### `testing` — Testing & Benchmarking
 

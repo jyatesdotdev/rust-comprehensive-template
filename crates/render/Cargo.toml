@@ -9,3 +9,10 @@ workspace = true
 
 [dependencies]
 math = { path = "../math" }
+
+# Dev-only sibling crate, sanctioned by the root AGENTS.md exception: the
+# `nbody` example and its integration test demonstrate `simulation` and
+# `render` composing. Library [dependencies] between domain crates remain
+# forbidden.
+[dev-dependencies]
+simulation = { path = "../simulation" }

@@ -26,7 +26,14 @@
 //! through that pixel ([`Camera::primary_ray`]); intersect it with geometry
 //! ([`Sphere`], [`Aabb`], [`Plane`]) and shade in linear light
 //! ([`LinearRgb`]). Both directions are the same math — the camera module's
-//! round-trip tests prove it.
+//! round-trip tests prove it. On top of the primary rays, [`raytrace`] casts
+//! two kinds of *secondary* rays: shadow rays (is the light visible from the
+//! hit point?) and one-bounce reflection rays (mirror materials, recursion
+//! bounded by [`Scene::max_depth`]).
+//!
+//! The `nbody` example (`cargo run -p render --example nbody`) drives the
+//! whole crate from the `simulation` crate's velocity-Verlet N-body
+//! integrator — two domain crates composing through their public APIs.
 //!
 //! # Which parts the GPU normally owns
 //!
@@ -42,7 +49,7 @@
 //!
 //! ```rust
 //! use math::Vec3;
-//! use render::{render, Camera, Framebuffer, LinearRgb, Scene, Sphere};
+//! use render::{render, Camera, Framebuffer, LinearRgb, Material, Scene, Sphere};
 //!
 //! let camera = Camera::new(
 //!     Vec3::new(0.0, 0.0, 5.0), // eye
@@ -55,9 +62,14 @@
 //! )
 //! .expect("camera parameters are non-degenerate");
 //! let scene = Scene {
-//!     spheres: vec![(Sphere::new(Vec3::ZERO, 1.0), LinearRgb::new(0.8, 0.1, 0.1))],
+//!     spheres: vec![(
+//!         Sphere::new(Vec3::ZERO, 1.0),
+//!         Material::new(LinearRgb::new(0.8, 0.1, 0.1), 0.2), // slightly mirror-like
+//!     )],
 //!     light_dir: Vec3::new(1.0, 1.0, 1.0),
 //!     background: LinearRgb::new(0.0, 0.0, 0.2),
+//!     ambient: 0.05,
+//!     max_depth: Scene::DEFAULT_MAX_DEPTH,
 //! };
 //! let mut fb = Framebuffer::new(16, 12);
 //! render(&scene, &camera, &mut fb);
@@ -73,7 +85,7 @@ pub mod raytrace;
 pub use camera::Camera;
 pub use color::LinearRgb;
 pub use geometry::{Aabb, Hit, Plane, Ray, Sphere};
-pub use raytrace::{render, Framebuffer, Scene};
+pub use raytrace::{render, Framebuffer, Material, Scene};
 
 /// Shared float-comparison helpers for this crate's tests (same rationale as
 /// `math`'s `approx_eq`: never compare computed floats with `==`).

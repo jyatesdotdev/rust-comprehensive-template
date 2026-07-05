@@ -24,6 +24,11 @@ Consequences for every edit you make:
   the only permitted internal dependencies are the two foundation crates:
   `common` (error types, `Entity`) and `math` (linear algebra, used by
   `render`). `patterns`/`cli` deliberately depend on nothing internal at all.
+  One sanctioned exception: `[dev-dependencies]` may reference a sibling domain
+  crate to power an **example or test that demonstrates crates composing**
+  (e.g. `render`'s N-body example driving `simulation`). Library
+  `[dependencies]` between domain crates remain forbidden — examples are
+  showcases, not coupling.
 
 ## Hard rules — CI rejects violations
 
@@ -107,8 +112,8 @@ still compiles.
 | `testing` | unit / property / integration tests, Criterion | `crates/testing/src/AGENTS.md` |
 | `cli` | clap binary, figment config, completions | `crates/cli/src/AGENTS.md` |
 | `math` | hand-rolled linear algebra (foundation crate) | `crates/math/src/AGENTS.md` |
-| `ml` | scalar autograd, NN training end-to-end | `crates/ml/src/AGENTS.md` |
-| `render` | ray geometry, camera pipeline, color (uses `math`) | `crates/render/src/AGENTS.md` |
+| `ml` | scalar + tensor autograd, NN training end-to-end | `crates/ml/src/AGENTS.md` |
+| `render` | ray tracing (shadows, reflection), camera pipeline, color (uses `math`) | `crates/render/src/AGENTS.md` |
 
 Reference docs for humans live in `docs/` (ARCHITECTURE, TUTORIAL, EXTENDING,
 MEMORY_SAFETY_AND_CONCURRENCY, SECURITY_SCANNING, cli). Keep them in sync when

@@ -58,7 +58,7 @@ rust-template/
 
 - `common` and `math` are the two foundation crates. `common` provides `AppError`, `Result`, and `Entity` to the domain crates; `math` provides linear algebra (and its column-major / right-handed / NDC conventions) to `render`.
 - `patterns`, `cli`, and `ml` are standalone — they depend on no internal crates.
-- No domain crate depends on another domain crate (flat hierarchy rooted at the foundation crates).
+- No domain crate depends on another domain crate (flat hierarchy rooted at the foundation crates). One sanctioned exception: `[dev-dependencies]` may reference a sibling to power an example or test that demonstrates crates composing — `render` dev-depends on `simulation` for its `nbody` example (`cargo run -p render --example nbody --release`).
 
 ## Libraries vs Binaries
 
